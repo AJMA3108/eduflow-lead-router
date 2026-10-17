@@ -671,12 +671,18 @@
           status: l.routeStatus || 'Routed ✓'
         }));
 
-        // Place live leads at the top and trigger your dashboard's native render function
+        // Mutates the array in-place without triggering the "const" reassignment error
         if (typeof demoLeads !== 'undefined') {
-          demoLeads = liveLeads.concat(demoLeads);
+          demoLeads.splice(0, 0, ...liveLeads);
           if (typeof renderLeads === 'function') {
             renderLeads();
           }
+        }
+
+        // Updates the "Total Live Inquiries" counter at the top
+        const totalCountEl = document.getElementById('web-leads-count');
+        if (totalCountEl && data.metrics) {
+          totalCountEl.textContent = data.metrics.totalInquiries;
         }
       })
       .catch(err => console.error("EduFlow sync error:", err));
