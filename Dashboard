@@ -646,47 +646,33 @@
       }, 800);
     };
 
-    // ===== INIT =====
+// ===== INIT =====
     window.onload = function() {
       renderLeads();
       renderRoutes();
+
+      // Pulls live leads from Google Sheet and displays them at the top
+      fetch("https://script.google.com/macros/s/AKfycbwgRW3MWi45KxaxaAUbaN__fG13GKcBPpL5V9GjKMO9F4KyMbRqCDCeB5ffeF6kbWrZGg/exec")
+        .then(res => res.json())
+        .then(data => {
+          if (!data || !data.leads || !data.leads.length) return;
+          data.leads.forEach(l => {
+            demoLeads.unshift({
+              time: l.timeCaptured || 'Just now',
+              name: l.studentName || 'Student',
+              contact: l.phoneOrEmail || '',
+              course: l.courseTarget || 'General Enquiry',
+              source: l.leadSource || 'Website Form',
+              status: l.routeStatus || 'Routed ✓'
+            });
+          });
+          renderLeads();
+          if (data.metrics && document.getElementById('web-leads-count')) {
+            document.getElementById('web-leads-count').textContent = data.metrics.totalInquiries;
+          }
+        })
+        .catch(err => console.error("EduFlow sync error:", err));
     };
   </script>
-<script>
-  // Connects live Google Sheet leads into EduFlow's native renderLeads engine
-  (function syncEduFlow() {
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwgRW3MWi45KxaxaAUbaN__fG13GKcBPpL5V9GjKMO9F4KyMbRqCDCeB5ffeF6kbWrZGg/exec";
-
-    fetch(BACKEND_URL)
-      .then(res => res.json())
-      .then(data => {
-        if (!data || !data.leads || !data.leads.length) return;
-
-        const liveLeads = data.leads.map(l => ({
-          time: l.timeCaptured || 'Just now',
-          name: l.studentName || 'Student',
-          contact: l.phoneOrEmail || '',
-          course: l.courseTarget || 'General Enquiry',
-          source: l.leadSource || 'Website Form',
-          status: l.routeStatus || 'Routed ✓'
-        }));
-
-        // Mutates the array in-place without triggering the "const" reassignment error
-        if (typeof demoLeads !== 'undefined') {
-          demoLeads.splice(0, 0, ...liveLeads);
-          if (typeof renderLeads === 'function') {
-            renderLeads();
-          }
-        }
-
-        // Updates the "Total Live Inquiries" counter at the top
-        const totalCountEl = document.getElementById('web-leads-count');
-        if (totalCountEl && data.metrics) {
-          totalCountEl.textContent = data.metrics.totalInquiries;
-        }
-      })
-      .catch(err => console.error("EduFlow sync error:", err));
-  })();
-</script> 
 </body>
 </html>
