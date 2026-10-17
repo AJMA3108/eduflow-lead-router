@@ -653,28 +653,34 @@
     };
   </script>
 <script>
-  // Connects EduFlow Dashboard to your live Google Sheet Database
-  const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwgRW3MWi45KxaxaAUbaN__fG13GKcBPpL5V9GjKMO9F4KyMbRqCDCeB5ffeF6kbWrZGg/exec";
+  // Connects live Google Sheet leads into EduFlow's native renderLeads engine
+  (function syncEduFlow() {
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwgRW3MWi45KxaxaAUbaN__fG13GKcBPpL5V9GjKMO9F4KyMbRqCDCeB5ffeF6kbWrZGg/exec";
 
-  fetch(BACKEND_URL)
-    .then(res => res.json())
-    .then(data => {
-      if (!data || !data.leads) return;
-      const tbody = document.querySelector('table tbody') || document.querySelector('tbody');
-      if (tbody) {
-        tbody.innerHTML = data.leads.slice(0, 10).map(lead => `
-          <tr>
-            <td>${lead.timeCaptured}</td>
-            <td><strong>${lead.studentName}</strong></td>
-            <td>${lead.phoneOrEmail}</td>
-            <td><span class="badge">${lead.courseTarget}</span></td>
-            <td>${lead.leadSource}</td>
-            <td><span style="color:#10b981;font-weight:bold;">${lead.routeStatus}</span></td>
-          </tr>
-        `).join('');
-      }
-    })
-    .catch(err => console.error("Dashboard sync error:", err));
+    fetch(BACKEND_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (!data || !data.leads || !data.leads.length) return;
+
+        const liveLeads = data.leads.map(l => ({
+          time: l.timeCaptured || 'Just now',
+          name: l.studentName || 'Student',
+          contact: l.phoneOrEmail || '',
+          course: l.courseTarget || 'General Enquiry',
+          source: l.leadSource || 'Website Form',
+          status: l.routeStatus || 'Routed ✓'
+        }));
+
+        // Place live leads at the top and trigger your dashboard's native render function
+        if (typeof demoLeads !== 'undefined') {
+          demoLeads = liveLeads.concat(demoLeads);
+          if (typeof renderLeads === 'function') {
+            renderLeads();
+          }
+        }
+      })
+      .catch(err => console.error("EduFlow sync error:", err));
+  })();
 </script> 
 </body>
 </html>
