@@ -647,31 +647,42 @@
     };
 
 // ===== INIT =====
-    window.onload = function() {
+window.onload = function() {
       renderLeads();
       renderRoutes();
 
-      // Pulls live leads from Google Sheet and displays them at the top
-      fetch("https://script.google.com/macros/s/AKfycbwgRW3MWi45KxaxaAUbaN__fG13GKcBPpL5V9GjKMO9F4KyMbRqCDCeB5ffeF6kbWrZGg/exec")
-        .then(res => res.json())
-        .then(data => {
-          if (!data || !data.leads || !data.leads.length) return;
-          data.leads.forEach(l => {
-            demoLeads.unshift({
-              time: l.timeCaptured || 'Just now',
-              name: l.studentName || 'Student',
-              contact: l.phoneOrEmail || '',
-              course: l.courseTarget || 'General Enquiry',
-              source: l.leadSource || 'Website Form',
-              status: l.routeStatus || 'Routed ✓'
+      // Direct Google Sheets feed (Zero CORS blocks)
+      const SHEET_URL = "https://docs.google.com/spreadsheets/d/11ZUDjieKtxZJRsNkh6HosNp1WS9BAopDrof3b_IKF40/gviz/tq?tqx=out:json&sheet=Leads";
+
+      fetch(SHEET_URL)
+        .then(res => res.text())
+        .then(text => {
+          const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+          const rows = json.table.rows;
+          if (!rows || !rows.length) return;
+
+          const liveLeads = [];
+          for (let i = rows.length - 1; i >= 1; i--) {
+            const c = rows[i].c;
+            if (!c[1] && !c[2]) continue;
+            liveLeads.push({
+              time: c[0] ? (c[0].f || c[0].v) : 'Just now',
+              name: c[1] ? c[1].v : 'Student',
+              contact: c[2] ? c[2].v : '',
+              course: c[3] ? c[3].v : 'General Enquiry',
+              source: c[4] ? c[4].v : 'Website Form',
+              status: c[7] ? c[7].v : 'Routed ✓'
             });
-          });
-          renderLeads();
-          if (data.metrics && document.getElementById('web-leads-count')) {
-            document.getElementById('web-leads-count').textContent = data.metrics.totalInquiries;
+          }
+
+          if (liveLeads.length > 0) {
+            demoLeads.splice(0, 0, ...liveLeads);
+            renderLeads();
+            const counter = document.getElementById('web-leads-count');
+            if (counter) counter.textContent = demoLeads.length;
           }
         })
-        .catch(err => console.error("EduFlow sync error:", err));
+        .catch(err => console.error("Sheets sync error:", err));
     };
   </script>
 </body>
